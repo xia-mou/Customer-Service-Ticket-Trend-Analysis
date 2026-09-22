@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>客服工单趋势分析 · 0111</title>
+  <style>
+    :root {
+      --ink: #17212b;
+      --muted: #66717d;
+      --line: #dce3ea;
+      --surface: #ffffff;
+      --page: #f4f6f8;
+      --navy: #16324f;
+      --blue: #2f6fed;
+      --teal: #0f766e;
+      --orange: #c46b14;
+      --red: #c24132;
+      --green: #2f855a;
+      --soft-blue: #edf3ff;
+      --soft-red: #fff1ee;
+      --soft-orange: #fff6e9;
+      --shadow: 0 8px 24px rgba(23, 33, 43, .06);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--ink); background: var(--page); font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif; font-size: 14px; line-height: 1.5; overflow-x: hidden; }
+    button, select { font: inherit; }
+    .app-shell { max-width: 1440px; margin: 0 auto; padding: 34px 38px 56px; }
+    .topbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 30px; margin-bottom: 26px; min-width: 0; }
+    .topbar > * { min-width: 0; }
+    .eyebrow { color: var(--blue); font-size: 11px; font-weight: 700; letter-spacing: .13em; }
+    h1 { margin: 7px 0 4px; font-size: 32px; line-height: 1.2; letter-spacing: 0; }
+    h2 { margin: 0; font-size: 18px; line-height: 1.3; }
+    h3 { margin: 0; font-size: 15px; }
+    .subtitle { color: var(--muted); margin: 0; }
+    .topbar-right { text-align: right; }
+    .date-range { color: var(--navy); font-weight: 700; white-space: nowrap; }
+    .print-button { margin-top: 12px; color: var(--navy); background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 8px 13px; cursor: pointer; }
+    .print-button:hover { background: var(--surface); }
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 18px; }
+    .kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); padding: 18px 20px; min-height: 132px; }
+    .kpi-label { color: var(--muted); font-size: 12px; }
+    .kpi-value { margin: 10px 0 4px; color: var(--navy); font-size: 31px; font-weight: 700; line-height: 1; }
+    .kpi-value.red { color: var(--red); }
+    .kpi-value.orange { color: var(--orange); }
+    .kpi-note { color: var(--muted); font-size: 12px; }
+    .signal-strip { display: flex; align-items: center; gap: 10px; background: var(--navy); color: #fff; border-radius: 7px; padding: 12px 16px; margin-bottom: 20px; }
+    .signal-strip strong { font-size: 13px; }
+    .signal-strip span { color: #d5e3f1; font-size: 12px; }
+    .signal-dot { width: 8px; height: 8px; border-radius: 50%; background: #f3a34b; flex: 0 0 auto; }
+    .grid-main { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(320px, .9fr); gap: 18px; margin-bottom: 18px; }
+    .grid-three { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(220px, .72fr) minmax(0, 1fr); gap: 18px; margin-bottom: 18px; }
+    .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); padding: 20px; min-width: 0; }
+    .panel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; margin-bottom: 16px; }
+    .panel-head p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+    .chart { width: 100%; overflow: hidden; }
+    .chart svg { width: 100%; height: auto; display: block; }
+    .chart-note { color: var(--muted); font-size: 12px; margin-top: 8px; }
+    .category-row { margin: 0 0 17px; }
+    .category-label, .category-meta { display: flex; justify-content: space-between; gap: 10px; }
+    .category-label { font-size: 13px; margin-bottom: 6px; }
+    .category-label span, .category-meta { color: var(--muted); font-size: 12px; }
+    .bar-track, .channel-track { background: var(--soft-blue); height: 9px; border-radius: 5px; overflow: hidden; }
+    .bar { height: 100%; border-radius: 5px; min-width: 6px; }
+    .bar-blue { background: var(--blue); }
+    .bar-orange { background: var(--orange); }
+    .bar-teal { background: var(--teal); }
+    .category-meta { margin-top: 5px; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 420px; }
+    th, td { border-bottom: 1px solid #edf0f3; padding: 10px 8px; text-align: left; vertical-align: top; }
+    th { color: var(--muted); font-size: 11px; font-weight: 700; white-space: nowrap; }
+    td { font-size: 12px; }
+    tr:last-child td { border-bottom: 0; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .danger-text { color: var(--red); font-weight: 700; }
+    .priority-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+    .priority-高 { background: var(--red); }
+    .priority-中 { background: var(--orange); }
+    .priority-低 { background: var(--teal); }
+    .channel-row { display: grid; grid-template-columns: 42px 1fr 26px 38px; align-items: center; gap: 8px; margin: 16px 0; }
+    .channel-row strong, .channel-row small { text-align: right; font-variant-numeric: tabular-nums; }
+    .channel-row small { color: var(--muted); font-size: 11px; }
+    .channel-track { height: 8px; }
+    .channel-track div { height: 100%; border-radius: 5px; }
+    .insight-list { list-style: none; padding: 0; margin: 0; }
+    .insight-list li { padding: 10px 0 10px 14px; border-bottom: 1px solid #edf0f3; position: relative; }
+    .insight-list li:last-child { border-bottom: 0; }
+    .insight-list li::before { content: ""; width: 4px; height: 4px; border-radius: 50%; background: var(--blue); position: absolute; left: 0; top: 19px; }
+    .insight-list strong { display: block; font-size: 12px; }
+    .insight-list span { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
+    .section { margin-top: 18px; }
+    .section-panel { padding: 20px; }
+    .tabs { display: flex; flex-wrap: wrap; gap: 7px; }
+    .tab { color: var(--muted); background: #f4f6f8; border: 1px solid transparent; border-radius: 5px; padding: 7px 11px; cursor: pointer; font-size: 12px; }
+    .tab.active { color: var(--navy); background: var(--soft-blue); border-color: #bfd2f9; font-weight: 700; }
+    .signal { display: inline-block; padding: 3px 6px; border-radius: 4px; font-size: 10px; white-space: nowrap; }
+    .signal-critical { color: var(--red); background: var(--soft-red); }
+    .signal-watch { color: var(--orange); background: var(--soft-orange); }
+    .state { display: inline-block; font-size: 11px; white-space: nowrap; }
+    .state::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin: 0 5px 1px 0; }
+    .state.resolved { color: var(--green); }
+    .state.resolved::before { background: var(--green); }
+    .state.open { color: var(--red); }
+    .state.open::before { background: var(--red); }
+    .ticket-id { color: var(--blue); font-weight: 700; white-space: nowrap; }
+    .desc { color: var(--muted); }
+    .anomaly-table { min-width: 840px; }
+    .anomaly-table td:last-child { min-width: 300px; }
+    .filters { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .filters label { color: var(--muted); font-size: 12px; }
+    select { color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 5px; padding: 7px 28px 7px 9px; }
+    .count { color: var(--muted); font-size: 12px; white-space: nowrap; }
+    .footer { color: var(--muted); font-size: 11px; margin-top: 20px; text-align: right; }
+    @media (max-width: 980px) {
+      .app-shell { padding: 24px 20px 40px; }
+      .topbar { display: block; }
+      .topbar-right { text-align: left; margin-top: 15px; }
+      .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .grid-main, .grid-three { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 540px) {
+      h1 { font-size: 26px; }
+      .kpi-grid { grid-template-columns: 1fr; }
+      .subtitle { max-width: 100%; overflow-wrap: anywhere; }
+      .topbar-right .date-range { white-space: normal; }
+      .signal-strip { align-items: flex-start; flex-wrap: wrap; }
+      .signal-strip > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+      .panel { padding: 16px; }
+      .panel-head { display: block; }
+      .panel-head .tabs { margin-top: 12px; }
+    }
+    @media print {
+      body { background: #fff; }
+      .app-shell { max-width: none; padding: 0; }
+      .panel, .kpi { box-shadow: none; }
+      .print-button, .filters, .tabs { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">CUSTOMER SUPPORT / 0111</div>
+        <h1>客服工单趋势分析</h1>
+        <p class="subtitle">把主管的注意力放到正在变坏、反复发生、还没有闭环的问题上。</p>
+      </div>
+      <div class="topbar-right">
+        <div id="date-range" class="date-range"></div>
+        <button id="print-button" class="print-button" type="button">打印 / 导出 PDF</button>
+      </div>
+    </header>
+
+    <section class="kpi-grid" aria-label="核心指标">
+      <article class="kpi"><div class="kpi-label">工单总量</div><div id="kpi-total" class="kpi-value"></div><div id="kpi-total-note" class="kpi-note"></div></article>
+      <article class="kpi"><div class="kpi-label">未解决工单</div><div id="kpi-unresolved" class="kpi-value red"></div><div id="kpi-unresolved-note" class="kpi-note"></div></article>
+      <article class="kpi"><div class="kpi-label">高优先级未解决</div><div id="kpi-high" class="kpi-value orange"></div><div id="kpi-high-note" class="kpi-note"></div></article>
+      <article class="kpi"><div class="kpi-label">平均满意度</div><div id="kpi-satisfaction" class="kpi-value"></div><div id="kpi-satisfaction-note" class="kpi-note"></div></article>
+    </section>
+
+    <div class="signal-strip"><span class="signal-dot"></span><strong>主管先看：</strong><span>退款退货是最明显的结构性风险：13 条工单中 5 条未解决，平均处理 45.23 小时，平均满意度仅 2.00 分。</span></div>
+
+    <section class="grid-main">
+      <article class="panel">
+        <div class="panel-head"><div><h2>工单量按日</h2><p>用每日进入量识别近期升温和排班压力</p></div><div id="daily-note" class="chart-note"></div></div>
+        <div id="daily-chart" class="chart"></div>
+      </article>
+      <article class="panel">
+        <div class="panel-head"><div><h2>问题类型分布</h2><p>数量之外同时看未解决量和处理时长</p></div></div>
+        <div id="category-chart"></div>
+      </article>
+    </section>
+
+    <section class="grid-three">
+      <article class="panel">
+        <div class="panel-head"><div><h2>优先级与结果</h2><p>高优先级的满意度明显落后</p></div></div>
+        <div class="table-wrap"><table><thead><tr><th>优先级</th><th class="num">数量</th><th class="num">未解决</th><th class="num">平均时长</th><th class="num">满意度</th></tr></thead><tbody id="priority-rows"></tbody></table></div>
+      </article>
+      <article class="panel">
+        <div class="panel-head"><div><h2>来源渠道</h2><p>在线渠道占比</p></div></div>
+        <div id="channel-rows"></div>
+      </article>
+      <article class="panel">
+        <div class="panel-head"><div><h2>效率对比</h2><p>按类别排序，快速定位耗时问题</p></div></div>
+        <div class="table-wrap"><table><thead><tr><th>类别</th><th class="num">平均时长</th><th class="num">满意度</th><th class="num">未解决</th></tr></thead><tbody id="efficiency-rows"></tbody></table></div>
+      </article>
+    </section>
+
+    <section class="panel section-panel section">
+      <div class="panel-head"><div><h2>异常信号清单</h2><p>规则：高优先级未解决 / 处理时长 ≥ 48 小时 / 满意度 ≤ 2 分</p></div><div id="anomaly-count" class="count"></div></div>
+      <div class="tabs" role="tablist" aria-label="异常筛选">
+        <button class="tab active" data-filter="all" type="button">全部异常</button>
+        <button class="tab" data-filter="open" type="button">未解决</button>
+        <button class="tab" data-filter="long" type="button">长时处理</button>
+        <button class="tab" data-filter="low" type="button">低满意度</button>
+      </div>
+      <div class="table-wrap" style="margin-top:12px"><table class="anomaly-table"><thead><tr><th>工单</th><th>类别</th><th>信号</th><th>状态</th><th class="num">处理时长</th><th class="num">满意度</th><th>判断依据 / 用户原文</th></tr></thead><tbody id="anomaly-rows"></tbody></table></div>
+    </section>
+
+    <section class="panel section-panel section">
+      <div class="panel-head"><div><h2>全部工单</h2><p>保留逐条复核入口，避免聚合结果脱离原文</p></div><div class="filters"><label for="category-filter">类别</label><select id="category-filter"><option value="all">全部类别</option></select><label for="status-filter">状态</label><select id="status-filter"><option value="all">全部状态</option><option value="open">未解决</option><option value="resolved">已解决</option></select><span id="ticket-count" class="count"></span></div></div>
+      <div class="table-wrap"><table style="min-width:1040px"><thead><tr><th>工单</th><th>时间</th><th>类别</th><th>优先级</th><th>渠道</th><th>状态</th><th class="num">处理时长</th><th class="num">满意度</th><th>描述</th></tr></thead><tbody id="ticket-rows"></tbody></table></div>
+    </section>
+
+    <div class="footer">分析样本：50 条工单 · 数据区间：2024-06-01 至 2024-06-11 · 页面无外部依赖</div>
+  </main>
+  <script>
+    const PRIORITY_ORDER = ['高', '中', '低'];
+
+function round(value, digits = 2) {
+  const factor = 10 ** digits;
+  return Math.round((value + Number.EPSILON) * factor) / factor;
+}
+
+function average(items, field) {
+  if (!items.length) return 0;
+  return round(items.reduce((sum, item) => sum + Number(item[field]), 0) / items.length);
+}
+
+function countBy(items, key) {
+  const counts = new Map();
+  items.forEach((item) => {
+    const value = typeof key === 'function' ? key(item) : item[key];
+    counts.set(value, (counts.get(value) || 0) + 1);
+  });
+  return counts;
+}
+
+function groupedStats(tickets, field, order = 'count') {
+  const groups = new Map();
+  tickets.forEach((ticket) => {
+    const value = ticket[field];
+    if (!groups.has(value)) groups.set(value, []);
+    groups.get(value).push(ticket);
+  });
+
+  const result = Array.from(groups, ([value, items]) => ({
+    [field]: value,
+    count: items.length,
+    share: round((items.length / tickets.length) * 100, 1),
+    unresolved: items.filter((item) => !item.is_resolved).length,
+    averageResolutionHours: average(items, 'resolution_time_hours'),
+    averageSatisfaction: average(items, 'satisfaction'),
+  }));
+
+  if (order === 'priority') {
+    return result.sort((a, b) => PRIORITY_ORDER.indexOf(a.priority) - PRIORITY_ORDER.indexOf(b.priority));
+  }
+  return result.sort((a, b) => b.count - a.count || a[field].localeCompare(b[field], 'zh-CN'));
+}
+
+function summarize(tickets) {
+  if (!Array.isArray(tickets) || tickets.length === 0) {
+    throw new Error('至少需要一条工单数据');
+  }
+
+  const dailyMap = countBy(tickets, (ticket) => ticket.created_at.slice(0, 10));
+  const daily = Array.from(dailyMap, ([date, count]) => ({ date, count }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const maxDay = daily.reduce((max, item) => item.count > max.count ? item : max, daily[0]);
+  const recent = daily.slice(-3);
+
+  return {
+    total: tickets.length,
+    resolved: tickets.filter((ticket) => ticket.is_resolved).length,
+    unresolved: tickets.filter((ticket) => !ticket.is_resolved).length,
+    highPriority: tickets.filter((ticket) => ticket.priority === '高').length,
+    highPriorityUnresolved: tickets.filter((ticket) => ticket.priority === '高' && !ticket.is_resolved).length,
+    averageResolutionHours: average(tickets, 'resolution_time_hours'),
+    averageSatisfaction: average(tickets, 'satisfaction'),
+    lowSatisfaction: tickets.filter((ticket) => ticket.satisfaction <= 2).length,
+    longProcessing: tickets.filter((ticket) => ticket.resolution_time_hours >= 48).length,
+    dateRange: [daily[0].date, daily[daily.length - 1].date],
+    daily,
+    maxDay,
+    recentThreeAverage: round(recent.reduce((sum, item) => sum + item.count, 0) / recent.length, 1),
+    categories: groupedStats(tickets, 'category'),
+    priority: groupedStats(tickets, 'priority', 'priority'),
+    channel: groupedStats(tickets, 'channel'),
+  };
+}
+
+function getAnomalies(tickets) {
+  return tickets
+    .filter((ticket) => ticket.resolution_time_hours >= 48 || ticket.satisfaction <= 2 || (ticket.priority === '高' && !ticket.is_resolved))
+    .map((ticket) => {
+      const reasons = [];
+      if (ticket.priority === '高' && !ticket.is_resolved) reasons.push('高优先级未解决');
+      if (ticket.resolution_time_hours >= 48) reasons.push(`处理时长 ${ticket.resolution_time_hours} 小时`);
+      if (ticket.satisfaction <= 2) reasons.push(`低满意度 ${ticket.satisfaction} 分`);
+      return {
+        ...ticket,
+        severity: ticket.priority === '高' && !ticket.is_resolved ? 'critical' : 'watch',
+        reason: reasons.join('、'),
+      };
+    })
+    .sort((a, b) => {
+      if (a.severity !== b.severity) return a.severity === 'critical' ? -1 : 1;
+      return b.resolution_time_hours - a.resolution_time_hours || a.satisfaction - b.satisfaction;
+    });
+}
+
+const api = { round, average, summarize, getAnomalies };
+
+if (typeof module !== 'undefined' && module.exports) module.exports = api;
+if (typeof globalThis !== 'undefined') globalThis.TicketAnalysis = api;
+
+    globalThis.Tickets = [{"ticket_id":"T001","created_at":"2024-06-01 09:15","category":"退款退货","description":"退货申请提交一周了还在审核中","priority":"高","resolution_time_hours":72,"satisfaction":2,"channel":"在线","is_resolved":true},{"ticket_id":"T002","created_at":"2024-06-01 10:30","category":"物流查询","description":"快递三天了没有任何物流更新","priority":"中","resolution_time_hours":4,"satisfaction":3,"channel":"在线","is_resolved":true},{"ticket_id":"T003","created_at":"2024-06-01 14:20","category":"商品咨询","description":"想问下这款面霜适不适合敏感肌","priority":"低","resolution_time_hours":1,"satisfaction":4,"channel":"在线","is_resolved":true},{"ticket_id":"T004","created_at":"2024-06-02 08:45","category":"退款退货","description":"收到的衣服和图片差太多了要退款","priority":"中","resolution_time_hours":24,"satisfaction":3,"channel":"电话","is_resolved":true},{"ticket_id":"T005","created_at":"2024-06-02 11:00","category":"账号问题","description":"登录后一直提示验证码错误进不去","priority":"高","resolution_time_hours":2,"satisfaction":4,"channel":"在线","is_resolved":true},{"ticket_id":"T006","created_at":"2024-06-02 15:30","category":"物流查询","description":"显示签收但我根本没收到","priority":"高","resolution_time_hours":48,"satisfaction":2,"channel":"电话","is_resolved":true},{"ticket_id":"T007","created_at":"2024-06-03 09:00","category":"退款退货","description":"退货寄回去三天了钱还没退","priority":"高","resolution_time_hours":96,"satisfaction":1,"channel":"在线","is_resolved":true},{"ticket_id":"T008","created_at":"2024-06-03 10:15","category":"支付问题","description":"付款成功但订单显示未支付","priority":"高","resolution_time_hours":3,"satisfaction":3,"channel":"在线","is_resolved":true},{"ticket_id":"T009","created_at":"2024-06-03 13:45","category":"商品咨询","description":"这个包能不能装15寸的笔记本","priority":"低","resolution_time_hours":0.5,"satisfaction":5,"channel":"在线","is_resolved":true},{"ticket_id":"T010","created_at":"2024-06-03 16:20","category":"投诉","description":"客服态度很差 问了三遍都不回答","priority":"高","resolution_time_hours":24,"satisfaction":1,"channel":"电话","is_resolved":true},{"ticket_id":"T011","created_at":"2024-06-04 08:30","category":"退款退货","description":"质量问题退货运费应该你们出吧","priority":"中","resolution_time_hours":12,"satisfaction":3,"channel":"在线","is_resolved":true},{"ticket_id":"T012","created_at":"2024-06-04 09:45","category":"支付问题","description":"微信支付扣了两次钱 订单只有一个","priority":"高","resolution_time_hours":6,"satisfaction":2,"channel":"电话","is_resolved":true},{"ticket_id":"T013","created_at":"2024-06-04 11:30","category":"物流查询","description":"下单五天了还没发货","priority":"中","resolution_time_hours":8,"satisfaction":2,"channel":"在线","is_resolved":true},{"ticket_id":"T014","created_at":"2024-06-04 14:00","category":"退款退货","description":"退款退到哪个账户了怎么查","priority":"中","resolution_time_hours":2,"satisfaction":4,"channel":"在线","is_resolved":true},{"ticket_id":"T015","created_at":"2024-06-04 16:45","category":"商品咨询","description":"这个充电器能不能给iPad用","priority":"低","resolution_time_hours":1,"satisfaction":4,"channel":"在线","is_resolved":true},{"ticket_id":"T016","created_at":"2024-06-05 09:10","category":"支付问题","description":"用花呗支付提示失败 但余额够啊","priority":"高","resolution_time_hours":4,"satisfaction":3,"channel":"在线","is_resolved":true},{"ticket_id":"T017","created_at":"2024-06-05 10:30","category":"退款退货","description":"我要换尺码 不是退货 是换货","priority":"中","resolution_time_hours":24,"satisfaction":3,"channel":"电话","is_resolved":true},{"ticket_id":"T018","created_at":"2024-06-05 13:15","category":"账号问题","description":"手机号换了 怎么改绑定的手机号","priority":"中","resolution_time_hours":2,"satisfaction":4,"channel":"在线","is_resolved":true},{"ticket_id":"T019","created_at":"2024-06-05 15:45","category":"物流查询","description":"包裹被退回了 我没让退啊","priority":"高","resolution_time_hours":36,"satisfaction":1,"channel":"电话","is_resolved":false},{"ticket_id":"T020","created_at":"2024-06-06 08:20","category":"支付问题","description":"信用卡支付成功了但订单没生成","priority":"高","resolution_time_hours":5,"satisfaction":2,"channel":"在线","is_resolved":true},{"ticket_id":"T021","created_at":"2024-06-06 09:50","category":"退款退货","description":"退货运费太贵了 能不能便宜点","priority":"低","resolution_time_hours":4,"satisfaction":3,"channel":"在线","is_resolved":true},{"ticket_id":"T022","created_at":"2024-06-06 11:30","category":"支付问题","description":"重复扣款 请帮我退回来","priority":"高","resolution_time_hours":8,"satisfaction":2,"channel":"电话","is_resolved":true},{"ticket_id":"T023","created_at":"2024-06-06 14:15","category":"商品咨询","description":"这个和那个套装有什么区别","priority":"低","resolution_time_hours":1,"satisfaction":4,"channel":"在线","is_resolved":true},{"ticket_id":"T024","created_at":"2024-06-06 16:00","category":"投诉","description":"收到的商品是破损的 你们不检查就发货吗","priority":"高","resolution_time_hours":48,"satisfaction":1,"channel":"在线","is_resolved":true},{"ticket_id":"T025","created_at":"2024-06-07 09:00","category":"支付问题","description":"付款页面一直转圈 付不了款","priority":"高","resolution_time_hours":1,"satisfaction":3,"channel":"在线","is_resolved":true},{"ticket_id":"T026","created_at":"2024-06-07 10:20","category":"退款退货","description":"我要退款 客服机器人一直让我重新描述问题","priority":"中","resolution_time_hours":6,"satisfaction":2,"channel":"在线","is_resolved":true},{"ticket_id":"T027","created_at":"2024-06-07 12:45","category":"物流查询","description":"快递信息已经4天没更新了","priority":"高","resolution_time_hours":24,"satisfaction":2,"channel":"电话","is_resolved":true},{"ticket_id":"T028","created_at":"2024-06-07 14:30","category":"支付问题","description":"用支付宝付的钱 显示扣款成功 但订单还是待支付","priority":"高","resolution_time_hours":3,"satisfaction":3,"channel":"在线","is_resolved":true},{"ticket_id":"T029","created_at":"2024-06-07 16:15","category":"账号问题","description":"账号突然被冻结了 我什么都没做","priority":"高","resolution_time_hours":12,"satisfaction":3,"channel":"电话","is_resolved":true},{"ticket_id":"T030","created_at":"2024-06-08 08:45","category":"支付问题","description":"下了两个订单 只想付一个 结果两个都扣钱了","priority":"高","resolution_time_hours":6,"satisfaction":1,"channel":"在线","is_resolved":true},{"ticket_id":"T031","created_at":"2024-06-08 10:00","category":"退款退货","description":"退货快递费我垫付了 说好了退给我 到现在没退","priority":"高","resolution_time_hours":120,"satisfaction":1,"channel":"电话","is_resolved":false},{"ticket_id":"T032","created_at":"2024-06-08 11:30","category":"支付问题","description":"银行卡已经扣款了但订单没成功","priority":"高","resolution_time_hours":4,"satisfaction":2,"channel":"在线","is_resolved":true},{"ticket_id":"T033","created_at":"2024-06-08 13:45","category":"物流查询","description":"快递显示异常 联系快递员也不接电话","priority":"中","resolution_time_hours":48,"satisfaction":2,"channel":"在线","is_resolved":false},{"ticket_id":"T034","created_at":"2024-06-08 15:20","category":"投诉","description":"等了40分钟才有客服接 你们人手不够就别开在线客服","priority":"高","resolution_time_hours":12,"satisfaction":1,"channel":"在线","is_resolved":true},{"ticket_id":"T035","created_at":"2024-06-09 09:30","category":"支付问题","description":"系统显示支付成功 但仓库说没收到订单 发不了货","priority":"高","resolution_time_hours":8,"satisfaction":2,"channel":"电话","is_resolved":true},{"ticket_id":"T036","created_at":"2024-06-09 10:45","category":"退款退货","description":"七天无理由退货 你们不给退 凭什么","priority":"高","resolution_time_hours":24,"satisfaction":1,"channel":"在线","is_resolved":false},{"ticket_id":"T037","created_at":"2024-06-09 12:15","category":"支付问题","description":"用花呗分了3期 但扣款金额不对","priority":"高","resolution_time_hours":6,"satisfaction":3,"channel":"在线","is_resolved":true},{"ticket_id":"T038","created_at":"2024-06-09 14:00","category":"商品咨询","description":"这个T恤洗了会缩水吗","priority":"低","resolution_time_hours":1,"satisfaction":4,"channel":"在线","is_resolved":true},{"ticket_id":"T039","created_at":"2024-06-09 15:45","category":"退款退货","description":"商品还没收到就已经自动确认收货了 我要退款","priority":"高","resolution_time_hours":36,"satisfaction":1,"channel":"电话","is_resolved":false},{"ticket_id":"T040","created_at":"2024-06-10 08:30","category":"支付问题","description":"优惠券用了但付款时没减 怎么回事","priority":"中","resolution_time_hours":3,"satisfaction":3,"channel":"在线","is_resolved":true},{"ticket_id":"T041","created_at":"2024-06-10 09:45","category":"支付问题","description":"微信扣了钱但订单取消了 钱什么时候退","priority":"高","resolution_time_hours":12,"satisfaction":2,"channel":"电话","is_resolved":true},{"ticket_id":"T042","created_at":"2024-06-10 11:20","category":"退款退货","description":"退货运费垫付了28块 你们说要报销的 什么时候给","priority":"高","resolution_time_hours":72,"satisfaction":1,"channel":"在线","is_resolved":false},{"ticket_id":"T043","created_at":"2024-06-10 13:00","category":"物流查询","description":"显示正在派送 从早上8点到现在5点了还没到","priority":"中","resolution_time_hours":4,"satisfaction":3,"channel":"在线","is_resolved":true},{"ticket_id":"T044","created_at":"2024-06-10 14:30","category":"投诉","description":"机器人一直回复同样的话 根本解决不了问题 浪费我时间","priority":"中","resolution_time_hours":8,"satisfaction":1,"channel":"在线","is_resolved":true},{"ticket_id":"T045","created_at":"2024-06-10 16:00","category":"账号问题","description":"别人用我的账号下了一单 不是我操作的","priority":"高","resolution_time_hours":4,"satisfaction":3,"channel":"电话","is_resolved":true},{"ticket_id":"T046","created_at":"2024-06-11 09:15","category":"支付问题","description":"又出现重复扣款了 上个月也有过","priority":"高","resolution_time_hours":6,"satisfaction":1,"channel":"在线","is_resolved":false},{"ticket_id":"T047","created_at":"2024-06-11 10:30","category":"退款退货","description":"退了一个星期了 退款还在处理中 你们是不是不想退","priority":"高","resolution_time_hours":96,"satisfaction":1,"channel":"电话","is_resolved":false},{"ticket_id":"T048","created_at":"2024-06-11 12:00","category":"支付问题","description":"结算页面打不开 刷新了好几次","priority":"中","resolution_time_hours":1,"satisfaction":3,"channel":"在线","is_resolved":true},{"ticket_id":"T049","created_at":"2024-06-11 14:20","category":"物流查询","description":"改了收货地址 但快递还是往旧地址送","priority":"高","resolution_time_hours":24,"satisfaction":2,"channel":"电话","is_resolved":true},{"ticket_id":"T050","created_at":"2024-06-11 15:45","category":"支付问题","description":"订单金额是199 扣了我299 多扣了100块","priority":"高","resolution_time_hours":8,"satisfaction":1,"channel":"在线","is_resolved":true}];
+    (function () {
+  const analysis = globalThis.TicketAnalysis;
+  const tickets = globalThis.Tickets;
+  const summary = analysis.summarize(tickets);
+  const anomalies = analysis.getAnomalies(tickets);
+
+  const colors = {
+    navy: '#16324f',
+    blue: '#2f6fed',
+    teal: '#0f766e',
+    orange: '#c46b14',
+    red: '#c24132',
+    ink: '#17212b',
+    muted: '#66717d',
+    grid: '#dce3ea',
+    soft: '#eef3f7',
+  };
+
+  function byId(id) {
+    return document.getElementById(id);
+  }
+
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function hours(value) {
+    return value < 1 ? `${value} 小时` : `${value} 小时`;
+  }
+
+  function percent(value) {
+    return `${Number(value).toFixed(value % 1 ? 1 : 0)}%`;
+  }
+
+  function renderKpis() {
+    byId('kpi-total').textContent = summary.total;
+    byId('kpi-unresolved').textContent = summary.unresolved;
+    byId('kpi-high').textContent = summary.highPriorityUnresolved;
+    byId('kpi-satisfaction').textContent = summary.averageSatisfaction.toFixed(2);
+    byId('kpi-total-note').textContent = `${summary.dateRange[0]} 至 ${summary.dateRange[1]}`;
+    byId('kpi-unresolved-note').textContent = `占全部 ${percent((summary.unresolved / summary.total) * 100)}`;
+    byId('kpi-high-note').textContent = `高优先级 ${summary.highPriority} 条中的 ${summary.highPriorityUnresolved} 条`;
+    byId('kpi-satisfaction-note').textContent = `低满意度工单 ${summary.lowSatisfaction} 条`;
+    byId('date-range').textContent = `${summary.dateRange[0]} — ${summary.dateRange[1]} · ${summary.total} 条工单`;
+  }
+
+  function renderDailyChart() {
+    const width = 760;
+    const height = 250;
+    const pad = { top: 22, right: 24, bottom: 42, left: 42 };
+    const max = Math.max.apply(null, summary.daily.map((item) => item.count));
+    const chartWidth = width - pad.left - pad.right;
+    const chartHeight = height - pad.top - pad.bottom;
+    const x = (index) => pad.left + (index / (summary.daily.length - 1)) * chartWidth;
+    const y = (value) => pad.top + chartHeight - (value / (max + 1)) * chartHeight;
+    const points = summary.daily.map((item, index) => `${x(index).toFixed(1)},${y(item.count).toFixed(1)}`).join(' ');
+    const yTicks = Array.from({ length: max + 2 }, (_, index) => index);
+    const xTickEvery = summary.daily.length > 8 ? 2 : 1;
+    const grid = yTicks.map((tick) => `<line x1="${pad.left}" y1="${y(tick)}" x2="${width - pad.right}" y2="${y(tick)}" stroke="${colors.grid}" stroke-width="1" />`).join('');
+    const yLabels = yTicks.map((tick) => `<text x="${pad.left - 12}" y="${y(tick) + 4}" text-anchor="end" fill="${colors.muted}" font-size="11">${tick}</text>`).join('');
+    const xLabels = summary.daily.map((item, index) => index % xTickEvery === 0 ? `<text x="${x(index)}" y="${height - 14}" text-anchor="middle" fill="${colors.muted}" font-size="11">${item.date.slice(5)}</text>` : '').join('');
+    const dots = summary.daily.map((item, index) => `<circle cx="${x(index)}" cy="${y(item.count)}" r="4" fill="${colors.blue}" stroke="#ffffff" stroke-width="2"><title>${item.date}：${item.count} 条</title></circle>`).join('');
+    byId('daily-chart').innerHTML = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="按日工单量折线图"><title>按日工单量</title>${grid}${yLabels}${xLabels}<polyline points="${points}" fill="none" stroke="${colors.blue}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />${dots}</svg>`;
+    byId('daily-note').textContent = `峰值 ${summary.maxDay.date.slice(5)} 为 ${summary.maxDay.count} 条，最近 3 日均值 ${summary.recentThreeAverage} 条`;
+  }
+
+  function renderCategoryChart() {
+    const max = summary.categories[0].count;
+    byId('category-chart').innerHTML = summary.categories.map((item, index) => {
+      const barClass = index === 0 ? 'bar bar-blue' : index === 1 ? 'bar bar-orange' : 'bar bar-teal';
+      return `<div class="category-row"><div class="category-label"><strong>${escapeHtml(item.category)}</strong><span>${item.count} 条 · ${percent(item.share)}</span></div><div class="bar-track"><div class="${barClass}" style="width:${(item.count / max) * 100}%"></div></div><div class="category-meta"><span>${item.unresolved ? `${item.unresolved} 未解决` : '全部已解决'}</span><span>${hours(item.averageResolutionHours)}</span></div></div>`;
+    }).join('');
+  }
+
+  function renderPriority() {
+    byId('priority-rows').innerHTML = summary.priority.map((item) => `<tr><td><span class="priority-dot priority-${item.priority}"></span>${item.priority}</td><td class="num">${item.count}</td><td class="num">${item.unresolved}</td><td class="num">${hours(item.averageResolutionHours)}</td><td class="num ${item.averageSatisfaction <= 2 ? 'danger-text' : ''}">${item.averageSatisfaction.toFixed(2)}</td></tr>`).join('');
+    byId('channel-rows').innerHTML = summary.channel.map((item) => `<div class="channel-row"><span>${escapeHtml(item.channel)}</span><div class="channel-track"><div style="width:${item.share}%; background:${item.channel === '在线' ? colors.teal : colors.orange}"></div></div><strong>${item.count}</strong><small>${percent(item.share)}</small></div>`).join('');
+  }
+
+  function renderEfficiency() {
+    const sorted = summary.categories.slice().sort((a, b) => b.averageResolutionHours - a.averageResolutionHours);
+    byId('efficiency-rows').innerHTML = sorted.map((item) => `<tr><td>${escapeHtml(item.category)}</td><td class="num">${hours(item.averageResolutionHours)}</td><td class="num ${item.averageSatisfaction <= 2 ? 'danger-text' : ''}">${item.averageSatisfaction.toFixed(2)}</td><td class="num">${item.unresolved}</td></tr>`).join('');
+  }
+
+  function anomalyRow(ticket) {
+    const severity = ticket.severity === 'critical' ? '<span class="signal signal-critical">立即关注</span>' : '<span class="signal signal-watch">重点观察</span>';
+    const state = ticket.is_resolved ? '<span class="state resolved">已解决</span>' : '<span class="state open">未解决</span>';
+    return `<tr><td class="ticket-id">${escapeHtml(ticket.ticket_id)}</td><td>${escapeHtml(ticket.category)}</td><td>${severity}</td><td>${state}</td><td class="num">${hours(ticket.resolution_time_hours)}</td><td class="num ${ticket.satisfaction <= 2 ? 'danger-text' : ''}">${ticket.satisfaction}</td><td><strong>${escapeHtml(ticket.reason)}</strong><br><span class="desc">${escapeHtml(ticket.description)}</span></td></tr>`;
+  }
+
+  function renderAnomalies(filter) {
+    let visible = anomalies;
+    if (filter === 'open') visible = anomalies.filter((ticket) => !ticket.is_resolved);
+    if (filter === 'long') visible = anomalies.filter((ticket) => ticket.resolution_time_hours >= 48);
+    if (filter === 'low') visible = anomalies.filter((ticket) => ticket.satisfaction <= 2);
+    byId('anomaly-rows').innerHTML = visible.map(anomalyRow).join('');
+    byId('anomaly-count').textContent = `${visible.length} 条`;
+  }
+
+  function renderTicketTable() {
+    const categorySelect = byId('category-filter');
+    const statusSelect = byId('status-filter');
+    const render = () => {
+      const category = categorySelect.value;
+      const status = statusSelect.value;
+      const filtered = tickets.filter((ticket) => {
+        const categoryMatch = category === 'all' || ticket.category === category;
+        const statusMatch = status === 'all' || (status === 'open' ? !ticket.is_resolved : ticket.is_resolved);
+        return categoryMatch && statusMatch;
+      });
+      byId('ticket-count').textContent = `${filtered.length} 条`;
+      byId('ticket-rows').innerHTML = filtered.map((ticket) => `<tr><td class="ticket-id">${escapeHtml(ticket.ticket_id)}</td><td>${escapeHtml(ticket.created_at.slice(5))}</td><td>${escapeHtml(ticket.category)}</td><td>${escapeHtml(ticket.priority)}</td><td>${escapeHtml(ticket.channel)}</td><td>${ticket.is_resolved ? '<span class="state resolved">已解决</span>' : '<span class="state open">未解决</span>'}</td><td class="num">${hours(ticket.resolution_time_hours)}</td><td class="num">${ticket.satisfaction}</td><td class="desc">${escapeHtml(ticket.description)}</td></tr>`).join('');
+    };
+    Array.from(document.querySelectorAll('[data-filter]')).forEach((button) => button.addEventListener('click', () => {
+      Array.from(document.querySelectorAll('[data-filter]')).forEach((item) => item.classList.remove('active'));
+      button.classList.add('active');
+      renderAnomalies(button.dataset.filter);
+    }));
+    categorySelect.addEventListener('change', render);
+    statusSelect.addEventListener('change', render);
+    renderAnomalies('all');
+    render();
+    Array.from(new Set(tickets.map((ticket) => ticket.category))).sort((a, b) => a.localeCompare(b, 'zh-CN')).forEach((category) => {
+      categorySelect.insertAdjacentHTML('beforeend', `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`);
+    });
+  }
+
+  renderKpis();
+  renderDailyChart();
+  renderCategoryChart();
+  renderPriority();
+  renderEfficiency();
+  renderTicketTable();
+  byId('print-button').addEventListener('click', () => window.print());
+})();
+
+  </script>
+</body>
+</html>

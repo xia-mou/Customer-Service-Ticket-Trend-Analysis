@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>客服工单趋势分析 · 0111</title>
+  <style>
+    :root {
+      --ink: #17212b;
+      --muted: #66717d;
+      --line: #dce3ea;
+      --surface: #ffffff;
+      --page: #f4f6f8;
+      --navy: #16324f;
+      --blue: #2f6fed;
+      --teal: #0f766e;
+      --orange: #c46b14;
+      --red: #c24132;
+      --green: #2f855a;
+      --soft-blue: #edf3ff;
+      --soft-red: #fff1ee;
+      --soft-orange: #fff6e9;
+      --shadow: 0 8px 24px rgba(23, 33, 43, .06);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--ink); background: var(--page); font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif; font-size: 14px; line-height: 1.5; overflow-x: hidden; }
+    button, select { font: inherit; }
+    .app-shell { max-width: 1440px; margin: 0 auto; padding: 34px 38px 56px; }
+    .topbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 30px; margin-bottom: 26px; min-width: 0; }
+    .topbar > * { min-width: 0; }
+    .eyebrow { color: var(--blue); font-size: 11px; font-weight: 700; letter-spacing: .13em; }
+    h1 { margin: 7px 0 4px; font-size: 32px; line-height: 1.2; letter-spacing: 0; }
+    h2 { margin: 0; font-size: 18px; line-height: 1.3; }
+    h3 { margin: 0; font-size: 15px; }
+    .subtitle { color: var(--muted); margin: 0; }
+    .topbar-right { text-align: right; }
+    .date-range { color: var(--navy); font-weight: 700; white-space: nowrap; }
+    .print-button { margin-top: 12px; color: var(--navy); background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 8px 13px; cursor: pointer; }
+    .print-button:hover { background: var(--surface); }
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 18px; }
+    .kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); padding: 18px 20px; min-height: 132px; }
+    .kpi-label { color: var(--muted); font-size: 12px; }
+    .kpi-value { margin: 10px 0 4px; color: var(--navy); font-size: 31px; font-weight: 700; line-height: 1; }
+    .kpi-value.red { color: var(--red); }
+    .kpi-value.orange { color: var(--orange); }
+    .kpi-note { color: var(--muted); font-size: 12px; }
+    .signal-strip { display: flex; align-items: center; gap: 10px; background: var(--navy); color: #fff; border-radius: 7px; padding: 12px 16px; margin-bottom: 20px; }
+    .signal-strip strong { font-size: 13px; }
+    .signal-strip span { color: #d5e3f1; font-size: 12px; }
+    .signal-dot { width: 8px; height: 8px; border-radius: 50%; background: #f3a34b; flex: 0 0 auto; }
+    .grid-main { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(320px, .9fr); gap: 18px; margin-bottom: 18px; }
+    .grid-three { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(220px, .72fr) minmax(0, 1fr); gap: 18px; margin-bottom: 18px; }
+    .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); padding: 20px; min-width: 0; }
+    .panel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; margin-bottom: 16px; }
+    .panel-head p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+    .chart { width: 100%; overflow: hidden; }
+    .chart svg { width: 100%; height: auto; display: block; }
+    .chart-note { color: var(--muted); font-size: 12px; margin-top: 8px; }
+    .category-row { margin: 0 0 17px; }
+    .category-label, .category-meta { display: flex; justify-content: space-between; gap: 10px; }
+    .category-label { font-size: 13px; margin-bottom: 6px; }
+    .category-label span, .category-meta { color: var(--muted); font-size: 12px; }
+    .bar-track, .channel-track { background: var(--soft-blue); height: 9px; border-radius: 5px; overflow: hidden; }
+    .bar { height: 100%; border-radius: 5px; min-width: 6px; }
+    .bar-blue { background: var(--blue); }
+    .bar-orange { background: var(--orange); }
+    .bar-teal { background: var(--teal); }
+    .category-meta { margin-top: 5px; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 420px; }
+    th, td { border-bottom: 1px solid #edf0f3; padding: 10px 8px; text-align: left; vertical-align: top; }
+    th { color: var(--muted); font-size: 11px; font-weight: 700; white-space: nowrap; }
+    td { font-size: 12px; }
+    tr:last-child td { border-bottom: 0; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .danger-text { color: var(--red); font-weight: 700; }
+    .priority-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+    .priority-高 { background: var(--red); }
+    .priority-中 { background: var(--orange); }
+    .priority-低 { background: var(--teal); }
+    .channel-row { display: grid; grid-template-columns: 42px 1fr 26px 38px; align-items: center; gap: 8px; margin: 16px 0; }
+    .channel-row strong, .channel-row small { text-align: right; font-variant-numeric: tabular-nums; }
+    .channel-row small { color: var(--muted); font-size: 11px; }
+    .channel-track { height: 8px; }
+    .channel-track div { height: 100%; border-radius: 5px; }
+    .insight-list { list-style: none; padding: 0; margin: 0; }
+    .insight-list li { padding: 10px 0 10px 14px; border-bottom: 1px solid #edf0f3; position: relative; }
+    .insight-list li:last-child { border-bottom: 0; }
+    .insight-list li::before { content: ""; width: 4px; height: 4px; border-radius: 50%; background: var(--blue); position: absolute; left: 0; top: 19px; }
+    .insight-list strong { display: block; font-size: 12px; }
+    .insight-list span { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
+    .section { margin-top: 18px; }
+    .section-panel { padding: 20px; }
+    .tabs { display: flex; flex-wrap: wrap; gap: 7px; }
+    .tab { color: var(--muted); background: #f4f6f8; border: 1px solid transparent; border-radius: 5px; padding: 7px 11px; cursor: pointer; font-size: 12px; }
+    .tab.active { color: var(--navy); background: var(--soft-blue); border-color: #bfd2f9; font-weight: 700; }
+    .signal { display: inline-block; padding: 3px 6px; border-radius: 4px; font-size: 10px; white-space: nowrap; }
+    .signal-critical { color: var(--red); background: var(--soft-red); }
+    .signal-watch { color: var(--orange); background: var(--soft-orange); }
+    .state { display: inline-block; font-size: 11px; white-space: nowrap; }
+    .state::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin: 0 5px 1px 0; }
+    .state.resolved { color: var(--green); }
+    .state.resolved::before { background: var(--green); }
+    .state.open { color: var(--red); }
+    .state.open::before { background: var(--red); }
+    .ticket-id { color: var(--blue); font-weight: 700; white-space: nowrap; }
+    .desc { color: var(--muted); }
+    .anomaly-table { min-width: 840px; }
+    .anomaly-table td:last-child { min-width: 300px; }
+    .filters { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .filters label { color: var(--muted); font-size: 12px; }
+    select { color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 5px; padding: 7px 28px 7px 9px; }
+    .count { color: var(--muted); font-size: 12px; white-space: nowrap; }
+    .footer { color: var(--muted); font-size: 11px; margin-top: 20px; text-align: right; }
+    @media (max-width: 980px) {
+      .app-shell { padding: 24px 20px 40px; }
+      .topbar { display: block; }
+      .topbar-right { text-align: left; margin-top: 15px; }
+      .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .grid-main, .grid-three { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 540px) {
+      h1 { font-size: 26px; }
+      .kpi-grid { grid-template-columns: 1fr; }
+      .subtitle { max-width: 100%; overflow-wrap: anywhere; }
+      .topbar-right .date-range { white-space: normal; }
+      .signal-strip { align-items: flex-start; flex-wrap: wrap; }
+      .signal-strip > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+      .panel { padding: 16px; }
+      .panel-head { display: block; }
+      .panel-head .tabs { margin-top: 12px; }
+    }
+    @media print {
+      body { background: #fff; }
+      .app-shell { max-width: none; padding: 0; }
+      .panel, .kpi { box-shadow: none; }
+      .print-button, .filters, .tabs { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">CUSTOMER SUPPORT / 0111</div>
+        <h1>客服工单趋势分析</h1>
+        <p class="subtitle">把主管的注意力放到正在变坏、反复发生、还没有闭环的问题上。</p>
+      </div>
+      <div class="topbar-right">
+        <div id="date-range" class="date-range"></div>
+        <button id="print-button" class="print-button" type="button">打印 / 导出 PDF</button>
+      </div>
+    </header>
+
+    <section class="kpi-grid" aria-label="核心指标">
+      <article class="kpi"><div class="kpi-label">工单总量</div><div id="kpi-total" class="kpi-value"></div><div id="kpi-total-note" class="kpi-note"></div></article>
+      <article class="kpi"><div class="kpi-label">未解决工单</div><div id="kpi-unresolved" class="kpi-value red"></div><div id="kpi-unresolved-note" class="kpi-note"></div></article>
+      <article class="kpi"><div class="kpi-label">高优先级未解决</div><div id="kpi-high" class="kpi-value orange"></div><div id="kpi-high-note" class="kpi-note"></div></article>
+      <article class="kpi"><div class="kpi-label">平均满意度</div><div id="kpi-satisfaction" class="kpi-value"></div><div id="kpi-satisfaction-note" class="kpi-note"></div></article>
+    </section>
+
+    <div class="signal-strip"><span class="signal-dot"></span><strong>主管先看：</strong><span>退款退货是最明显的结构性风险：13 条工单中 5 条未解决，平均处理 45.23 小时，平均满意度仅 2.00 分。</span></div>
+
+    <section class="grid-main">
+      <article class="panel">
+        <div class="panel-head"><div><h2>工单量按日</h2><p>用每日进入量识别近期升温和排班压力</p></div><div id="daily-note" class="chart-note"></div></div>
+        <div id="daily-chart" class="chart"></div>
+      </article>
+      <article class="panel">
+        <div class="panel-head"><div><h2>问题类型分布</h2><p>数量之外同时看未解决量和处理时长</p></div></div>
+        <div id="category-chart"></div>
+      </article>
+    </section>
+
+    <section class="grid-three">
+      <article class="panel">
+        <div class="panel-head"><div><h2>优先级与结果</h2><p>高优先级的满意度明显落后</p></div></div>
+        <div class="table-wrap"><table><thead><tr><th>优先级</th><th class="num">数量</th><th class="num">未解决</th><th class="num">平均时长</th><th class="num">满意度</th></tr></thead><tbody id="priority-rows"></tbody></table></div>
+      </article>
+      <article class="panel">
+        <div class="panel-head"><div><h2>来源渠道</h2><p>在线渠道占比</p></div></div>
+        <div id="channel-rows"></div>
+      </article>
+      <article class="panel">
+        <div class="panel-head"><div><h2>效率对比</h2><p>按类别排序，快速定位耗时问题</p></div></div>
+        <div class="table-wrap"><table><thead><tr><th>类别</th><th class="num">平均时长</th><th class="num">满意度</th><th class="num">未解决</th></tr></thead><tbody id="efficiency-rows"></tbody></table></div>
+      </article>
+    </section>
+
+    <section class="panel section-panel section">
+      <div class="panel-head"><div><h2>异常信号清单</h2><p>规则：高优先级未解决 / 处理时长 ≥ 48 小时 / 满意度 ≤ 2 分</p></div><div id="anomaly-count" class="count"></div></div>
+      <div class="tabs" role="tablist" aria-label="异常筛选">
+        <button class="tab active" data-filter="all" type="button">全部异常</button>
+        <button class="tab" data-filter="open" type="button">未解决</button>
+        <button class="tab" data-filter="long" type="button">长时处理</button>
+        <button class="tab" data-filter="low" type="button">低满意度</button>
+      </div>
+      <div class="table-wrap" style="margin-top:12px"><table class="anomaly-table"><thead><tr><th>工单</th><th>类别</th><th>信号</th><th>状态</th><th class="num">处理时长</th><th class="num">满意度</th><th>判断依据 / 用户原文</th></tr></thead><tbody id="anomaly-rows"></tbody></table></div>
+    </section>
+
+    <section class="panel section-panel section">
+      <div class="panel-head"><div><h2>全部工单</h2><p>保留逐条复核入口，避免聚合结果脱离原文</p></div><div class="filters"><label for="category-filter">类别</label><select id="category-filter"><option value="all">全部类别</option></select><label for="status-filter">状态</label><select id="status-filter"><option value="all">全部状态</option><option value="open">未解决</option><option value="resolved">已解决</option></select><span id="ticket-count" class="count"></span></div></div>
+      <div class="table-wrap"><table style="min-width:1040px"><thead><tr><th>工单</th><th>时间</th><th>类别</th><th>优先级</th><th>渠道</th><th>状态</th><th class="num">处理时长</th><th class="num">满意度</th><th>描述</th></tr></thead><tbody id="ticket-rows"></tbody></table></div>
+    </section>
+
+    <div class="footer">分析样本：50 条工单 · 数据区间：2024-06-01 至 2024-06-11 · 页面无外部依赖</div>
+  </main>
+  <script>
+    /* INLINE_ANALYSIS */
+    /* INLINE_TICKETS */
+    /* INLINE_DASHBOARD */
+  </script>
+</body>
+</html>

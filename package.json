@@ -1,0 +1,10 @@
+{
+  "name": "customer-service-ticket-trend-analysis",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Zero-dependency customer-service ticket trend dashboard",
+  "scripts": {
+    "test": "node tests/analysis.test.js",
+    "build": "node scripts/build.js"
+  }
+}
